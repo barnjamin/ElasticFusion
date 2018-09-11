@@ -6,23 +6,52 @@ RealSenseInterface::RealSenseInterface(int inWidth,int inHeight,int inFps)
   : width(inWidth),
   height(inHeight),
   fps(inFps),
-  dev(nullptr),
   initSuccessful(true)
 {
-  if(ctx.get_device_count() == 0)
+
+  rs2::config cfg;
+  cfg.enable_stream(RS2_STREAM_DEPTH, width, height, RS2_FORMAT_Z16, fps);
+  cfg.enable_stream(RS2_STREAM_COLOR, width, height, RS2_FORMAT_RGB8, fps);
+
+  auto dev_list = ctx.query_devices();
+  if(dev_list.size() == 0)
   {
     errorText = "No device connected.";
     initSuccessful = false;
     return;
   }
 
-  dev = ctx.get_device(0);
-  dev->enable_stream(rs::stream::depth,width,height,rs::format::z16,fps);
-  dev->enable_stream(rs::stream::color,width,height,rs::format::rgb8,fps);
+  rs2::device device = dev_list.front();
+  dev = &device;
+
+  auto sens = dev->query_sensors();
+  for(auto const &sen: sens){
+    if(sen.is<rs2::depth_sensor>()){
+      depth_sensor = sen;
+    }else{
+      video_sensor = sen;
+    }
+  }
+
+  auto sps = depth_sensor.get_stream_profiles();
+  for(auto const &sp: sps){
+    if (sp.is_default()){
+        depth_sensor.open(sp);
+        break;
+    }
+  }
+  
+
+  sps = video_sensor.get_stream_profiles();
+  for(auto const &sp: sps){
+    if(sp.is_default()){
+        video_sensor.open(sp);
+        break;
+    }
+  }
 
   latestDepthIndex.assign(-1);
   latestRgbIndex.assign(-1);
-
   for(int i = 0; i < numBuffers; i++)
   {
     uint8_t * newImage = (uint8_t *)calloc(width * height * 3,sizeof(uint8_t));
@@ -35,6 +64,7 @@ RealSenseInterface::RealSenseInterface(int inWidth,int inHeight,int inFps)
     uint8_t * newImage = (uint8_t *)calloc(width * height * 3,sizeof(uint8_t));
     frameBuffers[i] = std::pair<std::pair<uint8_t *,uint8_t *>,int64_t>(std::pair<uint8_t *,uint8_t *>(newDepth,newImage),0);
   }
+  std::cout << "Here3" <<std::endl;
 
   setAutoExposure(true);
   setAutoWhiteBalance(true);
@@ -49,17 +79,16 @@ RealSenseInterface::RealSenseInterface(int inWidth,int inHeight,int inFps)
     rgbBuffers,
     frameBuffers);
 
-  dev->set_frame_callback(rs::stream::depth,*depthCallback);
-  dev->set_frame_callback(rs::stream::color,*rgbCallback);
-
-  dev->start();
+  depth_sensor.start(*depthCallback);
+  video_sensor.start(*rgbCallback);
 }
 
 RealSenseInterface::~RealSenseInterface()
 {
   if(initSuccessful)
   {
-    dev->stop();
+    depth_sensor.stop();
+    video_sensor.stop();
 
     for(int i = 0; i < numBuffers; i++)
     {
@@ -79,22 +108,22 @@ RealSenseInterface::~RealSenseInterface()
 
 void RealSenseInterface::setAutoExposure(bool value)
 {
-  dev->set_option(rs::option::color_enable_auto_exposure,value);
+  video_sensor.set_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE,value);
 }
 
 void RealSenseInterface::setAutoWhiteBalance(bool value)
 {
-  dev->set_option(rs::option::color_enable_auto_white_balance,value);
+  video_sensor.set_option(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE,value);
 }
 
 bool RealSenseInterface::getAutoExposure()
 {
-  return dev->get_option(rs::option::color_enable_auto_exposure);
+  return video_sensor.get_option(RS2_OPTION_ENABLE_AUTO_EXPOSURE);
 }
 
 bool RealSenseInterface::getAutoWhiteBalance()
 {
-  return dev->get_option(rs::option::color_enable_auto_white_balance);
+  return video_sensor.get_option(RS2_OPTION_ENABLE_AUTO_WHITE_BALANCE);
 }
 #else
 

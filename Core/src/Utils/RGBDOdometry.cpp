@@ -17,6 +17,8 @@
  */
 
 #include "RGBDOdometry.h"
+#include <unistd.h>
+
 
 RGBDOdometry::RGBDOdometry(int width,
                            int height,
@@ -41,6 +43,7 @@ RGBDOdometry::RGBDOdometry(int width,
   height(height),
   cx(cx), cy(cy), fx(fx), fy(fy)
 {
+    std::cout << "rgbd" << std::endl;
     sumDataSE3.create(MAX_THREADS);
     outDataSE3.create(1);
     sumResidualRGB.create(MAX_THREADS);
@@ -48,6 +51,7 @@ RGBDOdometry::RGBDOdometry(int width,
     sumDataSO3.create(MAX_THREADS);
     outDataSO3.create(1);
 
+    usleep(1000000*2);
     for(int i = 0; i < NUM_PYRS; i++)
     {
         int2 nextDim = {height >> i, width >> i};
@@ -108,6 +112,7 @@ RGBDOdometry::RGBDOdometry(int width,
     minimumGradientMagnitudes[0] = 5;
     minimumGradientMagnitudes[1] = 3;
     minimumGradientMagnitudes[2] = 1;
+    std::cout << "rgbdend" << std::endl;
 }
 
 RGBDOdometry::~RGBDOdometry()

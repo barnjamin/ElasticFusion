@@ -178,13 +178,17 @@ void MainController::launch()
 {
     while(good)
     {
+        std::cout << "hi" << std::endl;
         if(eFusion)
         {
+        std::cout << "hereski" << std::endl;
             run();
         }
+        std::cout << "bye" << std::endl;
 
         if(eFusion == 0 || resetButton)
         {
+            std::cout << "wut" << std::endl;
             resetButton = false;
 
             if(eFusion)
@@ -192,8 +196,12 @@ void MainController::launch()
                 delete eFusion;
             }
 
+            std::cout << "wutski" << std::endl;
             logReader->rewind();
-            eFusion = new ElasticFusion(openLoop ? std::numeric_limits<int>::max() / 2 : timeDelta,
+            std::cout << "roo" << std::endl;
+            auto x = openLoop ? std::numeric_limits<int>::max() / 2 : timeDelta;
+            std::cout << x << std::endl;
+            eFusion = new ElasticFusion(x,
                                         icpCountThresh,
                                         icpErrThresh,
                                         covThresh,
@@ -209,6 +217,7 @@ void MainController::launch()
                                         so3,
                                         frameToFrameRGB,
                                         logReader->getFile());
+            std::cout << "knee" << std::endl;
         }
         else
         {
@@ -220,12 +229,16 @@ void MainController::launch()
 
 void MainController::run()
 {
+    std::cout << "hir" <<std::endl;
     while(!pangolin::ShouldQuit() && !((!logReader->hasMore()) && quiet) && !(eFusion->getTick() == end && quiet))
     {
+        std::cout << "hir1" <<std::endl;
         if(!gui->pause->Get() || pangolin::Pushed(*gui->step))
         {
+            std::cout << "hir2" <<std::endl;
             if((logReader->hasMore() || rewind) && eFusion->getTick() < end)
             {
+                std::cout << "hir3" <<std::endl;
                 TICK("LogRead");
                 if(rewind)
                 {
@@ -249,6 +262,7 @@ void MainController::run()
                 }
                 TOCK("LogRead");
 
+                std::cout << "hir4" <<std::endl;
                 if(eFusion->getTick() < start)
                 {
                     eFusion->setTick(start);

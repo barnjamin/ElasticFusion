@@ -48,8 +48,10 @@ Ferns::Ferns(int n, int maxDepth, const float photoThresh)
    vertBuff(width, height),
    normBuff(width, height)
 {
+    std::cout << "fern"<<std::endl;
     random.seed(time(0));
     generateFerns();
+    std::cout << "fernend"<<std::endl;
 }
 
 Ferns::~Ferns()

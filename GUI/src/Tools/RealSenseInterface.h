@@ -4,9 +4,9 @@
 #include <iostream>
 #include <algorithm>
 #include <map>
-
+#include <cstring>
 #ifdef WITH_REALSENSE
-#include "librealsense/rs.hpp"
+#include "librealsense2/rs.hpp"
 #endif
 
 #include "ThreadMutexObject.h"
@@ -48,15 +48,20 @@ public:
     {
     }
 
-    void operator()(rs::frame frame)
+    void operator()(rs2::frame frame)
     {
       lastRgbTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
       int bufferIndex = (latestRgbIndex.getValue() + 1) % numBuffers;
 
-      memcpy(rgbBuffers[bufferIndex].first,frame.get_data(),
-        frame.get_width() * frame.get_height() * 3);
+
+      auto f = frame.as<rs2::video_frame>();
+      auto width = f.get_width();
+      auto height = f.get_height();
+
+      std::memcpy(rgbBuffers[bufferIndex].first,frame.get_data(),
+        width * height * 3);
 
       rgbBuffers[bufferIndex].second = lastRgbTime;
 
@@ -85,16 +90,22 @@ public:
     {
     }
 
-    void operator()(rs::frame frame)
+    void operator()(rs2::frame frame)
     {
       lastDepthTime = std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::system_clock::now().time_since_epoch()).count();
 
       int bufferIndex = (latestDepthIndex.getValue() + 1) % numBuffers;
 
+
+      auto f = frame.as<rs2::video_frame>();
+      auto width = f.get_width();
+      auto height = f.get_height();
+
+
       // The multiplication by 2 is here because the depth is actually uint16_t
-      memcpy(frameBuffers[bufferIndex].first.first,frame.get_data(),
-        frame.get_width() * frame.get_height() * 2);
+      std::memcpy(frameBuffers[bufferIndex].first.first,frame.get_data(),
+        width * height * 2);
 
       frameBuffers[bufferIndex].second = lastDepthTime;
 
@@ -108,7 +119,7 @@ public:
       lastImageVal %= numBuffers;
 
       memcpy(frameBuffers[bufferIndex].first.second,rgbBuffers[lastImageVal].first,
-        frame.get_width() * frame.get_height() * 3);
+        width * height * 3);
 
       latestDepthIndex++;
     }
@@ -125,8 +136,11 @@ public:
 
 private:
 #ifdef WITH_REALSENSE
-  rs::device *dev;
-  rs::context ctx;
+  rs2::pipeline pipe;
+  rs2::device* dev;
+  rs2::context ctx;
+  rs2::sensor video_sensor;
+  rs2::sensor depth_sensor;
 
   RGBCallback * rgbCallback;
   DepthCallback * depthCallback;
